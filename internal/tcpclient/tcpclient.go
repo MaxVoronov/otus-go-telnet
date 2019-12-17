@@ -44,8 +44,8 @@ func NewClient(options *ConnectOptions) (*Client, error) {
 
 // Run Start reading and writing to connection
 func (client *Client) Run() {
-	inputData := make(chan []byte)
-	serverData := make(chan []byte)
+	inputData := make(chan string)
+	serverData := make(chan string)
 	fmt.Println("Press Ctrl + D for exit")
 
 	go client.readInputData(inputData)
@@ -54,28 +54,28 @@ func (client *Client) Run() {
 	for {
 		select {
 		case data := <-inputData:
-			if _, err := client.conn.Write(data); err != nil {
+			if _, err := client.conn.Write([]byte(data)); err != nil {
 				fmt.Printf("Writing error: %s\n", err)
 				return
 			}
 		case data := <-serverData:
-			fmt.Println(string(data))
+			fmt.Println(data)
 		case <-client.ctx.Done():
 			return
 		}
 	}
 }
 
-func (client *Client) readServerData(out chan<- []byte) {
+func (client *Client) readServerData(out chan<- string) {
 	scanner := bufio.NewScanner(client.conn)
 	for scanner.Scan() {
-		out <- scanner.Bytes()
+		out <- scanner.Text()
 	}
 
 	client.cancelFunc()
 }
 
-func (client *Client) readInputData(out chan<- []byte) {
+func (client *Client) readInputData(out chan<- string) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		text, err := reader.ReadString('\n')
@@ -86,7 +86,7 @@ func (client *Client) readInputData(out chan<- []byte) {
 			}
 			break
 		}
-		out <- []byte(text)
+		out <- text
 	}
 
 	client.cancelFunc()
